@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cloud.google.com/go/errorreporting"
 	"github.com/ChimeraCoder/anaconda"
 )
 
@@ -28,10 +31,12 @@ const (
 	TWITTER_CONSUMER_SECRET     = "TWITTER_CONSUMER_SECRET"
 	TWITTER_ACCESS_TOKEN        = "TWITTER_ACCESS_TOKEN"
 	TWITTER_ACCESS_TOKEN_SECRET = "TWITTER_ACCESS_TOKEN_SECRET"
+	PROJECT_ID                  = "metric-rain-twitter-bot"
 )
 
 var api *anaconda.TwitterApi
 var matchBasicTweetRegex, matchAdvancedTweetRegex *regexp.Regexp
+var errClient *errorreporting.Client
 
 func init() {
 	anaconda.SetConsumerKey(os.Getenv(TWITTER_CONSUMER_KEY))
@@ -46,9 +51,22 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	errClient, err = errorreporting.NewClient(context.Background(), PROJECT_ID, errorreporting.Config{
+		ServiceName: PROJECT_ID + "_job",
+		OnError: func(err error) {
+			log.Printf("Could not log error: %v", err)
+		},
+	})
+	if err != nil {
+		fmt.Println("NewClient Failed with error %v", err)
+		return
+	}
 }
 
 func main() {
+	if errClient != nil {
+		defer errClient.Close()
+	}
 }
 
 // HandleRequest is called by Google Cloud Functions when a webhook is received
@@ -56,6 +74,12 @@ func HandleRequest(w http.ResponseWriter, r *http.Request) {
 	err := RunAJob()
 	if err != nil {
 		fmt.Println("Job Failed with error %v", err)
+		// Report error to Google
+		if errClient != nil {
+			errClient.Report(errorreporting.Entry{
+				Error: err,
+			})
+		}
 	}
 }
 
@@ -77,12 +101,12 @@ func RunAJob() error {
 		return err
 	}
 
-	for i, hisTweet := range hisTweets {
-		//for i := len(hisTweets)-1; i>=0; i-- {
-		//	hisTweet := hisTweets[i]
+	// Go from oldest to Newest
+	for i := len(hisTweets) - 1; i >= 0; i-- {
+		hisTweet := hisTweets[i]
 		if repliedTweets[hisTweet.IdStr] == true {
-			// If I have replied to the Tweet, stop looking for more Tweets to reply to
-			break
+			// If I have replied to the Tweet, skip
+			continue
 		}
 		if hisTweet.InReplyToStatusIdStr != "" {
 			// Skip tweets where he replies to someone else
@@ -101,7 +125,6 @@ func RunAJob() error {
 		if err != nil {
 			return err
 		}
-		break
 	}
 	return nil
 }
@@ -131,6 +154,10 @@ func parseTweetToInches(text string) (float64, string, bool) {
 		if err != nil {
 			fmt.Println(err)
 			return 0, "", false
+		}
+		// Get rid of thing period space that he does sometimes.
+		if strings.HasPrefix(suffix, ". ") {
+			suffix = suffix[2:]
 		}
 		return value, suffix, true
 	}
@@ -173,7 +200,6 @@ func PrintTheirTweets(screenName string) {
 	for i, tweet := range tweets {
 		//fmt.Println(PrettyPrint(tweet))
 		fmt.Println(i)
-		fmt.Println(tweet.Text)
 		fmt.Println(tweet.FullText)
 	}
 }
