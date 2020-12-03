@@ -1,4 +1,4 @@
-module twitterBot
+module github.com/ryho/MetricRain
 
 go 1.13
 

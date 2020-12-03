@@ -1,4 +1,4 @@
-package main
+package MetricRain
 
 import (
 	"context"
@@ -63,11 +63,11 @@ func init() {
 	}
 }
 
-func main() {
-	if errClient != nil {
-		defer errClient.Close()
-	}
-}
+//func main() {
+//	if errClient != nil {
+//		defer errClient.Close()
+//	}
+//}
 
 // HandleRequest is called by Google Cloud Functions when a webhook is received
 func HandleRequest(w http.ResponseWriter, r *http.Request) {
