@@ -131,7 +131,7 @@ func RunAJob() error {
 
 func convertInchesToMillimetersText(inches float64) string {
 	mm := inches * mmPerInch
-	return fmt.Sprintf("%.2f mm \n", mm)
+	return fmt.Sprintf("%.1f mm \n", mm)
 }
 
 func parseTweetToInches(text string) (float64, string, bool) {
