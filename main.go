@@ -20,7 +20,7 @@ const (
 	HisScreenName = "SummerhillRain"
 	MyScreenName  = "MetricMartin"
 	fetchLimit    = "100"
-	cmPerInch     = 2.54
+	mmPerInch     = 25.4
 
 	matchBasicTweetRegexPattern    = "^([\\d]*\\.[\\d]*) inches(.*)"
 	matchAdvancedTweetRegexPattern = "^[\\d\\/]+: ([\\d]*\\.[\\d]*) inches$"
@@ -119,8 +119,8 @@ func RunAJob() error {
 		}
 		fmt.Print(inchValue, " in \n")
 
-		cmText := convertInchesToCentimetersText(inchValue)
-		message := "@" + HisScreenName + " " + cmText + suffix
+		mmText := convertInchesToMillimetersText(inchValue)
+		message := "@" + HisScreenName + " " + mmText + suffix
 		err = PostATweet(hisTweet.IdStr, message)
 		if err != nil {
 			return err
@@ -129,9 +129,9 @@ func RunAJob() error {
 	return nil
 }
 
-func convertInchesToCentimetersText(inches float64) string {
-	cm := inches * cmPerInch
-	return fmt.Sprintf("%.2f cm \n", cm)
+func convertInchesToMillimetersText(inches float64) string {
+	mm := inches * mmPerInch
+	return fmt.Sprintf("%.1f mm \n", mm)
 }
 
 func parseTweetToInches(text string) (float64, string, bool) {
@@ -155,7 +155,7 @@ func parseTweetToInches(text string) (float64, string, bool) {
 			fmt.Println(err)
 			return 0, "", false
 		}
-		// Get rid of thing period space that he does sometimes.
+		// Get rid of thing period space that he does sometimes. lol
 		if strings.HasPrefix(suffix, ". ") {
 			suffix = suffix[2:]
 		}
